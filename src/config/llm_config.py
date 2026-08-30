@@ -4,7 +4,7 @@ from google import genai
 
 load_dotenv()
 
-MODEL_NAME = "gemini-3.7-flash"  # change once, used everywhere
+MODEL_NAME = "gemini-3.6-flash"  # change once, used everywhere
 API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 _client = None
