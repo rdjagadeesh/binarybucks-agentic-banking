@@ -14,4 +14,8 @@ coverage/
 Thumbs.db
 binarybucks_audit.log
 
-docs/
+docs/*
+!docs/architecture.md
+!docs/architecture.png
+!docs/BinaryBucks-Architecture.PNG
+!docs/BinaryBucks-architecture.drawio

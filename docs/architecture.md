@@ -27,119 +27,64 @@ This structure mirrors enterprise agentic patterns while remaining fully simulat
 
 ## 2. Full Architecture Diagram
 
-```mermaid
-flowchart TB
+This GitHub-friendly preview shows the system architecture and the policy + guardrail controls that were added to the implementation.
 
-    %% UI Layer
-    subgraph UI_LAYER["User Interface Layer"]
-        UI["Chat UI and Dashboard"]
-    end
+![BinaryBucks architecture overview](./BinaryBucks-Architecture.PNG)
 
-    %% Edge Layer
-    subgraph EDGE_LAYER["Edge and API Layer"]
-        EDGE["Edge Layer (WAF, DDoS, Rate Limits, API Gateway)"]
-        API["API Entry Point"]
-    end
+You can also open and edit the live architecture diagram here:
 
-    %% Security Layer
-    subgraph SECURITY_LAYER["Security and Control Layer"]
-        AUTHN["Authentication (Identity Provider)"]
-        AUTHZ["Authorization"]
-        PII["PII Redaction"]
-        EVAL["Agent Evaluation Suite (future)"]
-        COST["Cost Tracker"]
-    end
+- [BinaryBucks Architecture.drawio](./BinaryBucks-architecture.drawio)
 
-    %% Session Store
-    subgraph SESSION_LAYER["Session Store"]
-        SESSION["Conversation History and Inter-agent Shared State"]
-    end
-
-    %% LLM Layer
-    subgraph LLM_LAYER["LLM and Reasoning Layer"]
-        SELF_LLM["Self-hosted LLM (future)"]
-        THIRD_LLM["Third-party LLM"]
-        FAQ["RAG / FAQ Knowledge"]
-    end
-
-    %% Coordinator and Agents
-    subgraph COORD_LAYER["Coordinator and Agents"]
-        ORCH["Coordinator Agent"]
-        ACC_AGENT["Accounts Agent"]
-        TX_AGENT["Transactions Agent"]
-        SVC_AGENT["Service Agent"]
-        RISK_AGENT["Risk Agent"]
-    end
-
-    %% Tools and MCP Servers
-    subgraph TOOLS_LAYER["Tools and MCP Servers"]
-        ACC_MCP["Accounts MCP Server (Balance Enquiry)"]
-        TX_MCP["Transactions MCP Server (Transaction Details, Statement Request)"]
-        SVC_MCP["Service MCP Server (Address Change, Cheque Book, KYC Update, Mortgages)"]
-    end
-
-    %% Observability
-    subgraph OBS_LAYER["Observability"]
-        OBS["Observability (Prompts, Agent Calls, Tool Calls, CPU, Memory, Disk)"]
-    end
-
-    %% User Journey
-    UI --> EDGE --> API
-
-    %% Security Flow
-    API --> AUTHN
-    API --> PII
-    API --> EVAL
-    AUTHN --> AUTHZ
-    API --> ORCH
-
-    %% Coordinator & Session
-    ORCH --> SESSION
-    SESSION --> ORCH
-
-    %% Coordinator to Agents
-    ORCH --> ACC_AGENT
-    ORCH --> TX_AGENT
-    ORCH --> SVC_AGENT
-    ORCH --> RISK_AGENT
-
-    %% Agents to MCP Servers
-    ACC_AGENT --> ACC_MCP
-    TX_AGENT --> TX_MCP
-    SVC_AGENT --> SVC_MCP
-    RISK_AGENT --> TX_MCP
-    RISK_AGENT --> SVC_MCP
-
-    %% Agents to LLMs
-    ORCH --> SELF_LLM
-    ORCH --> THIRD_LLM
-    ACC_AGENT --> THIRD_LLM
-    TX_AGENT --> THIRD_LLM
-    SVC_AGENT --> THIRD_LLM
-    RISK_AGENT --> THIRD_LLM
-
-    %% LLM to FAQ
-    THIRD_LLM --> FAQ
-
-    %% Policy & Guardrails
-    ORCH --> AUTHZ
-    ORCH --> EVAL
-
-    %% Observability & Cost
-    ORCH --> OBS
-    ACC_AGENT --> OBS
-    TX_AGENT --> OBS
-    SVC_AGENT --> OBS
-    RISK_AGENT --> OBS
-    OBS --> COST
-
-    %% Results back to user
-    ORCH --> API --> EDGE --> UI
-```
+This is the correct flow for a banking workflow. The user request enters the system, the orchestrator selects the relevant specialist agent, the agent performs reasoning and optionally uses LLMs or tools, and the policy/guardrail layer checks the result before any final decision or action is allowed.
 
 ---
 
-## 3. Component Summary
+## 3. Why the flow is structured this way
+
+The design is intentionally agent-first and policy-controlled:
+
+- User request enters the system through the API layer.
+- The coordinator decides which domain agent should handle the request.
+- Account, card, service, and risk agents perform the actual customer-facing reasoning.
+- Each agent may call an LLM or tools to gather context, classify intent, or request account data.
+- The results are then checked against deterministic guardrails such as refund limits, eligibility rules, fraud checks, PII controls, and compliance policies.
+- If the result is valid, the action or response is allowed.
+- If the result violates a policy or is ambiguous, the system escalates to human review or a safe fallback response.
+
+This is the correct pattern for a banking environment, because the model is probabilistic and the policy layer is deterministic.
+
+---
+
+## 4. Deterministic Policy Examples
+
+Examples of policy checks include:
+
+- Refund above 500 EUR is denied automatically.
+- High-risk transactions require manual review.
+- PII must be redacted before logs or external calls.
+- Account actions require valid customer status and eligibility checks.
+- An unsupported action should not proceed unless explicitly allowed.
+
+These policies are not separate from the agent flow; they are enforced after the agent has reasoned and before the final output or action is accepted.
+
+---
+
+## 5. Reliability and Deterministic Controls
+
+To make the platform dependable in a banking environment, the architecture adds several control points:
+
+- Policy engine with hard-coded business rules and compliance checks
+- Validation before tool execution
+- Retry and circuit breaker patterns for LLM and tool failures
+- Fallback flows to FAQ or safe canned responses when the primary model is unavailable
+- Human escalation for edge cases, fraud, or high-risk requests
+- Auditable logging of prompts, tool calls, decisions, and approvals
+
+This means the AI acts as an advisor and orchestrator, while the system enforces strict, deterministic actions where customer money or compliance is involved.
+
+---
+
+## 6. Component Summary
 
 ### User Interface Layer
 - Chat UI  
@@ -191,7 +136,7 @@ flowchart TB
 
 ---
 
-## 4. Future Expansion
+## 7. Future Expansion
 
 - Loans Agent  
 - Mortgage Agent  
@@ -204,7 +149,7 @@ flowchart TB
 
 ---
 
-## 5. Disclaimer
+## 8. Disclaimer
 
 BinaryBucks is a **simulated** system.  
 It does **not** access real banking systems, real customer data, or perform real financial actions.  
