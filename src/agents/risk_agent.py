@@ -1,44 +1,36 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
-from src.config.llm_config import get_llm_client, MODEL_NAME
+from src.config.llm_config import safe_generate
 from src.prompts.system_prompts import BINARYBUCKS_SYSTEM_PROMPT
 from src.tools.bank_tools import assess_mock_risk
 
 load_dotenv()
-client = get_llm_client()
-
 
 def handle_risk_query(user_query: str, customer_id: str, memory_text: str) -> str:
-    # Load FAQ / RAG-style knowledge
     try:
-        with open("docs/banking_faq.md", "r", encoding="utf-8") as f:
-            faq_text = f.read()
+        faq_path = Path(__file__).resolve().parents[2] / "docs" / "banking_faq.md"
+        with faq_path.open("r", encoding="utf-8") as f:
+            faq_text = f.read()[:600]
     except Exception:
-        faq_text = "FAQ data not available in this simulated environment."
+        faq_text = "FAQ unavailable."
 
-    # Tool: simulated risk scoring
-    amount = 6000  # demo value; could be parsed from text later
+    amount = 6000
     country = "us"
     risk_level = assess_mock_risk(amount, country)
 
-    tool_output_text = f"""
-    [Tool: RISK]
-    - Transaction Amount: {amount}
-    - Country: {country}
-    - Assessed Risk Level: {risk_level}
-    """
+    tool_output_text = (
+        f"[Tool: RISK]\n"
+        f"Amount: {amount}\n"
+        f"Country: {country}\n"
+        f"RiskLevel: {risk_level}"
+    )
 
-    if risk_level == "high":
-        human_message = (
-            "This case is assessed as HIGH RISK in the simulated model. "
-            "BinaryBucks cannot make final fraud or liability decisions. "
-            "This must be escalated to a human fraud specialist in a real banking environment."
-        )
-    else:
-        human_message = (
-            "This case is not classified as high risk in the simulated model, "
-            "but BinaryBucks still recommends contacting your bank for confirmation."
-        )
+    human_message = (
+        "High risk detected. Escalation recommended."
+        if risk_level == "high"
+        else "Not high risk, but verification recommended."
+    )
 
     contents = [
         {
@@ -47,24 +39,20 @@ def handle_risk_query(user_query: str, customer_id: str, memory_text: str) -> st
                 {"text": BINARYBUCKS_SYSTEM_PROMPT},
                 {"text": "[Agent: RISK]"},
                 {"text": f"[CustomerID] {customer_id}"},
-                {"text": f"[Memory]\n{memory_text}"},
-                {"text": f"[Knowledge]\n{faq_text[:3000]}"},
+                {"text": f"[Memory]\n{memory_text[-400:]}"},
+                {"text": f"[Knowledge]\n{faq_text}"},
                 {"text": tool_output_text},
                 {"text": human_message},
-                {"text": "[LLM: BEGIN]"},
-                {"text": f"Risk issue: {user_query}"}
+                {"text": f"Risk issue: {user_query}"},
+                {"text": "Write a calm, urgent answer and clearly explain the human-review next step."}
             ]
         }
     ]
 
-    try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=contents
-        )
-        return response.text
-    except Exception:
-        return (
-            "BinaryBucks encountered an issue while generating a risk-related response. "
-            "This is a simulated environment; please try again later."
-        )
+    fallback = (
+        f"This simulated review classified the example as {risk_level} risk. "
+        "Because the request involves suspicious or potentially unauthorized activity, "
+        "please contact official bank channels immediately and ask for human review. "
+        "Do not share passwords, PINs, or one-time passcodes."
+    )
+    return safe_generate(contents, fallback)
