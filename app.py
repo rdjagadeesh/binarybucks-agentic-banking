@@ -4,126 +4,85 @@ from src.agents.orchestrator import route_request
 # ---------------------------------------------------------
 # PAGE CONFIG
 # ---------------------------------------------------------
-st.set_page_config(page_title="BinaryBucks Support", layout="wide")
+st.set_page_config(page_title="BinaryBucks Support", page_icon=":material/account_balance:", layout="wide")
 
-# ---------------------------------------------------------
-# BRANDING HEADER
-# ---------------------------------------------------------
 st.markdown("""
-    <div style='text-align:center; padding:20px;'>
-        <h1 style='color:#0047AB; font-family:Arial;'>BinaryBucks Virtual Banking Assistant</h1>
-        <p style='color:#555;'>Smart. Secure. Simulated Banking Support</p>
-    </div>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+:root { --ink:#24170f; --muted:#77685f; --navy:#102a43; --orange:#e85d04; --orange-dark:#bd4600; --paper:#fffaf5; --line:#eadfd6; }
+.stApp { background:var(--paper); color:var(--ink); }
+[data-testid="stMainBlockContainer"] { max-width:1440px; padding-top:2rem; }
+h1,h2,h3,h4,[data-testid="stChatMessage"] p { font-family:'DM Sans',sans-serif; }
+h1,h2,h3,h4 { color:var(--ink); }
+.brand-mark,.panel-label { color:var(--orange-dark); font-family:'Space Grotesk',sans-serif; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.brand-mark { font-size:.74rem; }
+.hero-title { color:var(--navy); font-family:'Space Grotesk',sans-serif; font-size:clamp(2rem,4vw,3.6rem); line-height:1.02; margin:.25rem 0 .5rem; }
+.hero-copy { color:var(--muted); font-size:1rem; margin-bottom:1.5rem; }
+.panel-label { font-size:.73rem; }
+.console { background:#fff; border:1px solid var(--line); border-top:5px solid var(--orange); border-radius:10px; padding:1.4rem 1.5rem .7rem; box-shadow:0 12px 30px rgba(92, 52, 24, .06); }
+.console-header { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0e8e1; padding-bottom:1rem; margin-bottom:1rem; }
+.bank-name { color:var(--navy); font-family:'Space Grotesk',sans-serif; font-size:1.25rem; font-weight:700; }
+.bank-status { color:#277a4d; font-size:.78rem; font-weight:600; }
+.bank-status::before { content:' '; display:inline-block; width:8px; height:8px; margin-right:6px; border-radius:50%; background:#3aa76d; }
+[data-testid="stChatMessage"] { border:1px solid var(--line); border-left:4px solid var(--orange); border-radius:8px; margin:.65rem 0; padding:.85rem 1rem; background:#fff; }
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p { line-height:1.55; }
+[data-testid="stChatInput"] { border-color:var(--orange); }
+div.stButton > button { border-radius:6px; border-color:var(--line); color:var(--navy); font-weight:600; }
+div.stButton > button:hover { border-color:var(--orange); color:var(--orange-dark); }
+div.stButton > button[kind="primary"] { background:var(--orange); border-color:var(--orange); color:#fff; }
+</style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# SESSION MEMORY
-# ---------------------------------------------------------
 if "history" not in st.session_state:
     st.session_state["history"] = []
 
-# ---------------------------------------------------------
-# LAYOUT: CHAT LEFT, DASHBOARD RIGHT
-# ---------------------------------------------------------
-chat_col, profile_col = st.columns([2, 1])
+def clean_answer(answer):
+    markers = ["[Agent: ACCOUNT]", "[Agent: CARD]", "[Agent: RISK]",
+               "[Tool: PROFILE]", "[Tool: RISK]", "[LLM: BEGIN]"]
+    for marker in markers:
+        answer = answer.replace(marker, "")
+    return answer.strip()
 
-# ---------------------------------------------------------
-# CUSTOMER PROFILE DASHBOARD (RIGHT SIDE)
-# ---------------------------------------------------------
-with profile_col:
-    st.markdown("<h3 style='color:#0047AB;'>Customer Overview</h3>", unsafe_allow_html=True)
 
-    customer_id = st.text_input("Customer ID (simulated):", value="CUST001")
+def submit_query(user_query, customer_id):
+    history_text = "\n".join(
+        f"{msg['role']}: {msg['content']}" for msg in st.session_state["history"]
+    )
+    with st.spinner("Reviewing your request..."):
+        answer = route_request(user_query, customer_id, history_text)
+    st.session_state["history"].extend([
+        {"role": "user", "content": user_query},
+        {"role": "assistant", "content": clean_answer(answer)},
+    ])
 
-    segment = st.selectbox("Segment", ["Retail Banking", "Private Banking", "SME"])
-    risk_rating = st.selectbox("Risk Rating", ["Low", "Medium", "High"])
-    current_balance = st.number_input("Current Account Balance (€)", value=2500)
-    savings_balance = st.number_input("Savings Account Balance (€)", value=12000)
 
-    st.markdown(f"""
-        <div style='background-color:#F0F8FF; padding:15px; border-radius:10px; margin-top:10px;'>
-            <h4 style='color:#0047AB;'>Profile Snapshot</h4>
-            <p><strong>ID:</strong> {customer_id}</p>
-            <p><strong>Segment:</strong> {segment}</p>
-            <p><strong>Risk Rating:</strong> {risk_rating}</p>
-            <p><strong>Current Account:</strong> €{current_balance}</p>
-            <p><strong>Savings Account:</strong> €{savings_balance}</p>
-        </div>
-    """, unsafe_allow_html=True)
+st.markdown('<div class="brand-mark">BinaryBucks Bank / digital support</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title">How can we help<br>with your banking today?</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-copy">Secure customer support for accounts, cards, and transactions.</div>', unsafe_allow_html=True)
 
-    st.markdown(f"""
-        <div style='background-color:#FFF8DC; padding:15px; border-radius:10px; margin-top:10px;'>
-            <h4 style='color:#0047AB;'>Card Status</h4>
-            <p><strong>Debit Card:</strong> Active</p>
-            <p><strong>Credit Card:</strong> Active</p>
-        </div>
-    """, unsafe_allow_html=True)
+customer_id = "CUST001"
 
-# ---------------------------------------------------------
-# CHAT WINDOW (LEFT SIDE)
-# ---------------------------------------------------------
-with chat_col:
-    st.markdown("<h3 style='color:#0047AB;'>Chat with BinaryBucks</h3>", unsafe_allow_html=True)
+st.markdown('<div class="console">', unsafe_allow_html=True)
+st.markdown('<div class="console-header"><span class="bank-name">BinaryBucks Bank</span><span class="bank-status">Support online</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="panel-label">Secure conversation</div>', unsafe_allow_html=True)
 
-    # QUICK ACTION BUTTONS
-    st.markdown("**Quick Actions:**")
-    col1, col2, col3 = st.columns(3)
+if not st.session_state["history"]:
+    with st.chat_message("assistant", avatar=":material/account_balance:"):
+        st.markdown("Welcome to **BinaryBucks Bank support**. Tell me what you need help with, and I’ll guide you through the next step.")
+        st.caption("For your security, never share passwords, PINs, or one-time passcodes here.")
 
-    quick_action = None
-    if col1.button("Card Issue"):
-        quick_action = "I have an issue with my debit or credit card."
-    if col2.button("Fraud / Suspicious"):
-        quick_action = "I see a suspicious or unauthorized transaction."
-    if col3.button("Account Help"):
-        quick_action = "I need help with my bank account."
+for message in st.session_state["history"]:
+    role = "user" if message["role"] == "user" else "assistant"
+    avatar = ":material/person:" if role == "user" else ":material/account_balance:"
+    with st.chat_message(role, avatar=avatar):
+        st.markdown(message["content"])
 
-    # USER INPUT
-    if quick_action:
-        user_query = quick_action
-    else:
-        user_query = st.text_input("Type your message:")
+if prompt := st.chat_input("Type your message to BinaryBucks Bank..."):
+    submit_query(prompt, customer_id)
+    st.rerun()
 
-    # SEND BUTTON
-    if st.button("Send"):
-        if user_query.strip():
-            with st.spinner("BinaryBucks is thinking..."):
-                # Build memory text for LLM
-                history_text = "\n".join(
-                    [f"{msg['role']}: {msg['content']}" for msg in st.session_state["history"]]
-                )
+st.markdown('</div>', unsafe_allow_html=True)
 
-                # Call orchestrator with memory + customer ID
-                answer = route_request(
-                    user_query,
-                    customer_id,
-                    history_text
-                )
-
-                # Clean answer (remove internal markers)
-                clean_answer = (
-                    answer.replace("[Agent: ACCOUNT]", "")
-                          .replace("[Agent: CARD]", "")
-                          .replace("[Agent: RISK]", "")
-                          .replace("[Tool: PROFILE]", "")
-                          .replace("[Tool: RISK]", "")
-                          .replace("[LLM: BEGIN]", "")
-                )
-
-                # Save memory
-                st.session_state["history"].append({"role": "user", "content": user_query})
-                st.session_state["history"].append({"role": "agent", "content": clean_answer})
-
-    # DISPLAY CHAT HISTORY
-    for msg in st.session_state["history"]:
-        if msg["role"] == "user":
-            st.markdown(f"""
-                <div style='background-color:#E3F2FD; padding:10px; border-radius:10px; margin:5px 0;'>
-                    <strong>You:</strong> {msg['content']}
-                </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                <div style='background-color:#E8F5E9; padding:10px; border-radius:10px; margin:5px 0;'>
-                    <strong>BinaryBucks:</strong> {msg['content']}
-                </div>
-            """, unsafe_allow_html=True)
+if st.session_state["history"] and st.button("Clear conversation", icon=":material/delete_sweep:"):
+    st.session_state["history"] = []
+    st.rerun()

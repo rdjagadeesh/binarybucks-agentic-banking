@@ -86,10 +86,12 @@ binarybucks-agentic-banking/
 │
 ├── src/
 │   ├── agents/
-│   │   ├── account_agent.py
-│   │   ├── card_agent.py
-│   │   ├── risk_agent.py
-│   │   └── orchestrator.py
+│   │   ├── account_agent.py       # extension specialist
+│   │   ├── card_agent.py          # extension specialist
+│   │   ├── risk_agent.py          # extension specialist
+│   │   ├── transaction_agent.py   # extension specialist
+│   │   ├── service_agent.py       # extension specialist
+│   │   └── orchestrator.py        # active LLM boundary
 │   │
 │   ├── config/
 │   │   ├── llm_config.py
@@ -102,7 +104,7 @@ binarybucks-agentic-banking/
 │   │   ├── bank_tools.py
 │   │   └── logging_tools.py
 │   │
-│   └── RAG/auths
+│   └── tools
 │       
 │
 ├── docs/
@@ -110,7 +112,9 @@ binarybucks-agentic-banking/
 |   |── architecture.md
 |   └── agent_design.md
 │
-└── binarybucks_audit.log
+├── tests/
+│   └── test_support.py
+└── binarybucks_audit.log          # generated locally; ignored by Git
 ```
 
 ---
@@ -127,6 +131,10 @@ BinaryBucks is structured to support future enhancements such as:
 - API gateway integration  
 - Multi-turn intent classification  
 - Human review dashboards  
+
+### Production gaps
+
+Before connecting real financial data, add authentication and authorization, a managed session store, PII redaction at the API boundary, structured/centralized audit logging, provider timeouts and retries, an evaluation suite, and real MCP/API integrations. The current customer profile, transactions, and risk scores are fixtures for demonstration only.
 
 ---
 
